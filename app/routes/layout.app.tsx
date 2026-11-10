@@ -1,4 +1,12 @@
-import { Outlet } from "react-router";
+import { Outlet, useSearchParams } from "react-router";
+import { getFeed } from "~/lib/knock-prototype.server";
+import {
+  FEED_VARIANTS,
+  VariantABell,
+  VariantBNavItem,
+  VariantCRail,
+} from "~/components/notification-feed-prototype";
+import { PrototypeSwitcher } from "~/components/prototype-switcher";
 import type { Route } from "./+types/layout.app";
 import { Sidebar } from "~/components/sidebar";
 import { DevUI } from "~/components/dev-ui";
@@ -198,7 +206,11 @@ export async function loader({ request }: Route.LoaderArgs) {
       })
     : [];
 
+  // PROTOTYPE: real Knock feed for the DevUI-selected user
+  const feed = currentUserId ? await getFeed(currentUserId) : null;
+
   return {
+    feed,
     users: users.map((u) => ({ id: u.id, name: u.name, role: u.role })),
     currentUser: currentUser
       ? {
@@ -225,7 +237,10 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     countryTierInfo,
     countries,
     isTeamAdmin: userIsTeamAdmin,
+    feed,
   } = loaderData;
+  const [searchParams] = useSearchParams();
+  const variant = searchParams.get("variant") ?? "A";
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -233,10 +248,14 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
         currentUser={currentUser}
         recentCourses={recentCourses}
         isTeamAdmin={userIsTeamAdmin}
+        headerSlot={feed && variant === "A" && <VariantABell feed={feed} />}
+        navSlot={feed && variant === "B" && <VariantBNavItem feed={feed} />}
       />
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
+      {feed && variant === "C" && <VariantCRail feed={feed} />}
+      {feed && <PrototypeSwitcher variants={FEED_VARIANTS} />}
       <DevUI
         users={users}
         currentUser={currentUser}
